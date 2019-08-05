@@ -251,7 +251,7 @@ DBImpl::DBImpl(const DBOptions& options, const std::string& dbname,
   // is called by client and this seqnum is advanced.
   preserve_deletes_seqnum_.store(0);
   std::cout<<"Should initialize counter here\n";
-  asynch_counter = new AsynchCounter();
+  asynch_counter = new AsynchCounters();
   num_commit = 0;
   num_commit_waits = 0;
   avoided_commit_waits = 0;

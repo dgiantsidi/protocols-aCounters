@@ -16,6 +16,7 @@
 #include "rocksdb/slice.h"
 #include "rocksdb/status.h"
 // #include "mylib/WALcounter.h"
+#include "mylib/aCounters.h"
 namespace rocksdb {
 
 class WritableFileWriter;
@@ -78,7 +79,7 @@ class Writer {
   ~Writer();
 
   Status AddRecord(const Slice& slice);
-  Status AddRecord(const Slice& slice, const int timestamp);
+  Status AddRecord(const Slice& slice, const int timestamp, AsynchCounters* ptr);
 
 
   WritableFileWriter* file() { return dest_.get(); }

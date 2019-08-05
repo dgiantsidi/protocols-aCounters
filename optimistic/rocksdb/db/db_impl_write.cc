@@ -902,7 +902,7 @@ Status DBImpl::WriteToWALWithTimestamps(const std::map<int, WriteBatch*>* groupB
     if (UNLIKELY(needs_locking)) {
         log_write_mutex_.Lock();
     }
-    status = log_writer->AddRecord(log_entry, x.second->counterTimestamp);
+    status = log_writer->AddRecord(log_entry, x.second->counterTimestamp, asynch_counter);
     /* status = log_writer->AddRecord(log_entry); */
     
     if (UNLIKELY(needs_locking)) {

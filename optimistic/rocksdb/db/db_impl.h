@@ -61,6 +61,7 @@
 #include "util/thread_local.h"
 #include "util/trace_replay.h"
 #include "mylib/counter.h"
+#include "mylib/aCounters.h"
 #include "mylib/temporaryCache.h"
 #include "mylib/hashMap/inc/HashMap.h"
 
@@ -86,7 +87,7 @@ namespace rocksdb {
       virtual ~DBImpl();
 
 
-      AsynchCounter* asynch_counter;
+      AsynchCounters* asynch_counter;
       TemporaryCache unstablePeriodCache;
 //      CTSL::HashMap<std::string, int> integerMap;
       std::atomic<int> num_commit_waits;

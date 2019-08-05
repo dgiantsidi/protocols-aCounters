@@ -658,7 +658,7 @@ Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& log_numbers,
     std::cout << latest_timestamp;
     ifs.close();
 
-    ifs.open ("wal_counter.txt", std::ifstream::in);
+    ifs.open ("wal_counter1.txt", std::ifstream::in);
     while (std::getline(ifs, line)) {
       if (line.size() != 0) {
         prev = line;
@@ -1045,7 +1045,7 @@ Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& log_numbers,
 
     ifs.close();
 
-    ifs.open ("wal_counter.txt", std::ifstream::in);
+    ifs.open ("wal_counter1.txt", std::ifstream::in);
     while (std::getline(ifs, line)) {
       if (line.size() != 0) {
         prev = line;
@@ -1057,9 +1057,11 @@ Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& log_numbers,
 
     uint64_t latest_record = 0;
     uint64_t latest_stable_record = 0;
+    uint64_t log_count = 0;
 
     for (auto log_number : log_numbers) {
       std::cout << WALCounter << "\n";
+      log_count++;
       if (log_number < versions_->min_log_number_to_keep_2pc()) {
         ROCKS_LOG_INFO(immutable_db_options_.info_log,
             "Skipping log #%" PRIu64
@@ -1248,7 +1250,7 @@ Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& log_numbers,
 #endif  // ROCKSDB_LITE
       }
 
-      if (latest_stable_record != WALCounter) {
+      if ((log_count == log_numbers.size()) && (latest_stable_record != WALCounter)) {
         printf("[Stale WAL] %lu %lu\n", latest_stable_record, WALCounter);
       }
 
@@ -1272,7 +1274,7 @@ Status DBImpl::RecoverLogFiles(const std::vector<uint64_t>& log_numbers,
             continue;
           }
           if (status.ok()) {
-            std::cout << "We did it!\n";
+            // std::cout << "We did it!\n";
           }
 
           if (has_valid_writes && !read_only) {

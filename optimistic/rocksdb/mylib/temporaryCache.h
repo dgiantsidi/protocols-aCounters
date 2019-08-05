@@ -1,5 +1,6 @@
 #pragma once 
 #include <unordered_set>
+#include <map>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -16,12 +17,40 @@ namespace rocksdb {
       int indexToBeDeleted;
 
       std::atomic<int> clearIndex;
+        int return_counter_last_stable_value() {
+            std::ifstream ifs;
+            std::string line, prev;
+            int id;
+
+            ifs.open ("counter_file.txt", std::ifstream::in);
+            while (std::getline(ifs, line)) {
+                prev = line;
+            }
+
+            if (prev.size() != 0) {
+                id =  std::stoi(prev);
+            }
+            else {
+                id = -1;
+            }
+            ifs.close();
+
+            return id;
+        }
 
       TemporaryCache() {
         clearIndex = 0;
+        int id;
+        if ((id = return_counter_last_stable_value()) == -1) {
         tableOfIndexes[1] = new CTSL::HashMap<std::string, int>;
         liveIndexesAccesses[1].store(0, std::memory_order_seq_cst);
         indexToBeDeleted = 1;
+        }
+        else {
+        tableOfIndexes[id+1] = new CTSL::HashMap<std::string, int>;
+        liveIndexesAccesses[id+1].store(0, std::memory_order_seq_cst);
+        indexToBeDeleted = id+1;
+        }
       };
 
       ~ TemporaryCache() {

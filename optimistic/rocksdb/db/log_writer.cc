@@ -15,8 +15,12 @@
 #include "util/crc32c.h"
 #include "util/file_reader_writer.h"
 #include "mylib/wal_counter.h"
+#include "mylib/aCounters.h"
+#include "mylib/temporaryCache.h"
 
-static WALCounter recordCounter;
+// static WALCounter recordCounter;
+static AsynchCounters *ptrWAL;
+
 namespace rocksdb {
   namespace log {
 
@@ -40,13 +44,13 @@ namespace rocksdb {
     /**
      * We append each record in the WAL and then the timestamp (uint64_t).
      */
-    Status Writer::AddRecord(const Slice& slice, const int timestamp) {
+    Status Writer::AddRecord(const Slice& slice, const int timestamp, AsynchCounters* WALptr) {
       const char* ptr = slice.data();
       size_t left = slice.size();
-
+      ptrWAL = WALptr;
       Status s;
       /* std::cout << "log writer: " << slice.ToString(true) << " " << timestamp << "\n"; */
-
+  
       // Header size varies depending on whether we are recycling or not.
       const int header_size =
         recycle_log_files_ ? kRecyclableHeaderSize : kHeaderSize;
@@ -256,7 +260,13 @@ namespace rocksdb {
       size_t counter_size = sizeof(uint64_t);
       memcpy(counter_ptr, &timestamp, sizeof(uint64_t));
 
+      /*
       uint64_t recordId = static_cast<uint64_t>(recordCounter.current_value() + 1);
+      char recordId_ptr[sizeof(uint64_t)];
+      size_t recordId_size = sizeof(uint64_t);
+      memcpy(recordId_ptr, &recordId, sizeof(uint64_t));
+  */
+      uint64_t recordId = static_cast<uint64_t>(ptrWAL->wal_current_value() + 1);
       char recordId_ptr[sizeof(uint64_t)];
       size_t recordId_size = sizeof(uint64_t);
       memcpy(recordId_ptr, &recordId, sizeof(uint64_t));
@@ -314,7 +324,8 @@ namespace rocksdb {
               s = dest_->Flush();
             }
           }
-          recordCounter.increment();
+          // recordCounter.increment();
+          ptrWAL->incrementWAL();
           //                extra_offset = counter_size + recordId_size;
           // std::cout << "Added record with id " << recordId << "\n";
         }

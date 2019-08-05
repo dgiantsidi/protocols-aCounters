@@ -100,7 +100,6 @@ namespace rocksdb {
               return Status::Busy();
     }
 
-    
     GetWriteBatch()->GetWriteBatch()->counterTimestamp = stableVal + 1;
     Status s = db_impl->WriteWithCallback(
               write_options_, GetWriteBatch()->GetWriteBatch(), &callback);
@@ -112,7 +111,7 @@ namespace rocksdb {
       std::atomic_fetch_add(&(db_impl->num_commit), 1);
       if (commitWait)
         std::atomic_fetch_add(&(db_impl->num_commit_waits), 1);
-      struct return_values* ret = new return_values;
+      struct A_return_values* ret = new A_return_values;
       // db_impl->asynch_counter->increment(ret, stableVal+1);
       db_impl->asynch_counter->increment(ret);
       delete ret;

@@ -321,13 +321,13 @@ namespace rocksdb {
         }
 
         int commitWait = 0;
-        int prev_stable = -1;
+        // int prev_stable = -1;
         if (checkForWritesInSamePeriod()) {
           std::atomic_fetch_add(&(db_impl_->num_commit_waits), 1); // (dimitra) this is for keeping stats
           commitWait = 1;
-          prev_stable = db_impl_->asynch_counter->stable_value();
+          // prev_stable = db_impl_->asynch_counter->stable_value();
           // std::cout << "Eftasa edw\n";
-          std::this_thread::sleep_for(std::chrono::milliseconds(db_impl_->asynch_counter->expected_time())); // unstable-period typically is not the expected time (in our API they are equivalent)
+          // std::this_thread::sleep_for(std::chrono::milliseconds(db_impl_->asynch_counter->expected_time())); // unstable-period typically is not the expected time (in our API they are equivalent)
         }
 
         // these are for logging and checking the correctness of our code
@@ -340,9 +340,9 @@ namespace rocksdb {
            * ensure that you commit to a distinct unstable period 
            * (different stable values)
            */
-          while (stableVal == prev_stable) {
-            stableVal = db_impl_->asynch_counter->stable_value();
-          }
+          // while (stableVal == prev_stable) {
+            // stableVal = db_impl_->asynch_counter->stable_value();
+         // }
         }
 
 
@@ -362,9 +362,9 @@ namespace rocksdb {
           write_text_to_log_file (txnID, stableVal,commitWait);
         }
 
-        struct return_values* ret = new return_values;
-        db_impl_->asynch_counter->increment(ret); // we increment the asynchronous counter value
-        delete ret;
+        // struct return_values* ret = new return_values;
+        // db_impl_->asynch_counter->increment(ret); // we increment the asynchronous counter value
+        // delete ret;
 
         // here rocksdb releases the locks and other dependent transactions
         // are now able to proceed

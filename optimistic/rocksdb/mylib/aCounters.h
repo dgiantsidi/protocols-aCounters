@@ -97,6 +97,7 @@ class AsynchCounters {
             val->incremented_val = (id != -1) ? id : 0;
             A_stop = 0;
             A_store_in_progress = 0;
+
             if ((id = return_WALcounter_last_stable_value()) != -1)
                 wal_val->cur_stable_val = id;
             else
@@ -118,7 +119,8 @@ class AsynchCounters {
          * thread will store it in a file (stable). We mock with timer the
          * period needed to write to an SGX-counter for ensuring the freshness
          * of the software counters (see SPEICHER or thesis for more info).
-         * 
+         * At synchronization points all modified software counters are
+         * synchronized 'concurrently'.
          */
         static void _inspect_changes(struct A_counter_values** vals) {
             struct A_counter_values *val = vals[0];
@@ -159,11 +161,7 @@ class AsynchCounters {
                     {
                         std::unique_lock<std::shared_timed_mutex> lock(A_counterMutex);
                         std::this_thread::sleep_for(std::chrono::milliseconds(A_CHECK_TIME_INTERVAL));
-                        /**
-                         * To ensure that the Index flushing and counter synchronization happen atomically 
-                         * we embedd the synchronization operation (writing to the file) inside the 
-                         * 'clear' utility. 
-                         */
+
                         wal_val->cur_stable_val.store(wal_val->incremented_val.load(), std::memory_order_seq_cst);
                         std::ofstream log_file("wal_counter1.txt", std::ios_base::out | std::ios_base::app);
                         log_file << wal_val->cur_stable_val.load() << "\n";

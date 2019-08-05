@@ -20,7 +20,7 @@
 
 
 #define OPNUM 5 // number of PUT operations (updates)
-#define TESTDURATION 1000000 // number of transactions (must be huge)
+#define TESTDURATION 2000000 // number of transactions (must be huge)
 using namespace rocksdb;
 
 
@@ -81,10 +81,10 @@ int main() {
     }
 
 
-    // Cleanup
-    delete txn_db;
     std::cout << "Bomb the db.. time to crash\n";
+    // Cleanup
     std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    delete txn_db;
     
     DestroyDB(kDBPath, options);
     return 0;
