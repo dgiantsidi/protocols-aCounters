@@ -8,9 +8,9 @@ that continuously iterates over both counters and checks for changes (current
 stable value != incremented value). 
 
 `mylib/counter.h`, `mylib/wal_counter.h'` : Stand-Alone asynchronous counters
-that used for debbugging and evaluation. 
+that used for debbugging and evaluation.
 
-`mylib/temporaryCache.h` :  The implementation of our Index. Specifically we use a `rocksdb::InlineSkiplist` instance. We provide two key comparators (Numerical and Bytewise) and we only use the `BytewiseComparator` to support all key types.
+`mylib/temporaryCache.h` :  The implementation of our Index. Specifically we use a `rocksdb::InlineSkiplist` instance. We provide two key comparators (Numerical and Bytewise) and we only use the `BytewiseComparator` to support all key types (the numerical comparator has been developped for testing purposes).
 
 `utilities/transactions/pessimistic_transaction.h`, `utilities/transactions/pessimistic_transaction.cc` 
 Our protocol's implementation.
@@ -25,19 +25,19 @@ Our protocol's implementation.
 `db/db_impl.h` : We extend the logic of the db to 'inject' our counter and Index objects as well as the recovery algorithm.
 
 `db/db_impl.h`, `db/db_impl_write.cc` : Logging Records along with timestamps.
-- `MergeBatchesOfSameEpoch(const WriteThread::WriteGroup& write_group);` : Instead of merging all records into a single batch we create a list with all sub-batches (individual to each txn). That way, we preserve the individual timestamps. Since non-conflicting transactions can be processed in parallel merging may concatenate transactions with different timestamps.
+- `MergeBatchesOfSameEpoch(const WriteThread::WriteGroup& write_group);` : Instead of merging all records into a single batch we create a list with all sub-batches (individual to each txn). That way, we preserve the individual timestamps. Since non-conflicting transactions can be processed in parallel merging may concatenate transactions with different timestamps. (Observation: No performance overhead compared to the default implementation).
 - `WriteToWALWithTimestamps(const std::map<int, WriteBatch*>* groupBatches,
                            log::Writer* log_writer, uint64_t* log_used,
                            uint64_t* log_size);` : Our implementation to store transactions' write batches (local buffers) along with their acquired timestamps.
 
 `db/log_reader.h`, `db/log_reader.cc` : WAL reader modification.
 - `ReadRecord(Slice* record, std::string* scratch, int* timestamp, WALRecoveryMode wal_recovery_mode = WALRecoveryMode::kTolerateCorruptedTailRecords);` Reconstructs a write-batch from WAL.
-- `ReadPhysicalRecord(Slice* result, size_t* drop_size, int* previous_val);` : Reads a physical record from WAL and returns its type.
+- `ReadPhysicalRecord(Slice* result, size_t* drop_size, int* _id);` : Reads a physical record from WAL and returns its type. Also the `_id` contains the WAL id.
 
 `db/log_writer.h`, `db/log_writer.cc` : WAL writer modification.
 - `AddRecord(const Slice& slice, const int timestamp, class AsynchCounters* asynch_counter);`: Takes a write batch and appends it in the WAL. It may be splitted to one or multiple WAL records.
 - `EmitPhysicalRecord(RecordType type, const char* ptr, size_t length,
-                               int timestamp);`: Writes a single physical record to the WAL.
+                               int timestamp);`: Writes a single physical record to the WAL. After emiting a physical record to the storage medium we increase the WAL counter.
 
 
 `db/db_impl_open.cc` : Recovery Algorithm.
@@ -53,7 +53,7 @@ are sparse in the codebase.
 
 `mylib/aCounters.h` : The emulated ACM interface (similar to pessimistic).
 
-`mylib/temporaryCache.h` :  The implementation of the Index. We use a concurrent thread-safe hash map. Keys are arbitrary strings.  The implementation of the concurrent thread-safe hash map can be found in `mylib/hashMap/` directory.
+`mylib/temporaryCache.h` :  The implementation of the Index. We use a concurrent thread-safe hash map. Keys are arbitrary strings. The implementation of the concurrent thread-safe hash map can be found in `mylib/hashMap/` directory.
 
 `utilities/transactions/optimistic_transaction.h`, `utilities/transactions/optimistic_transaction.cc` 
 Our protocol's implementation.
