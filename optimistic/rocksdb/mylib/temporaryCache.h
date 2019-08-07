@@ -1,6 +1,7 @@
 #pragma once 
 #include <unordered_set>
 #include <map>
+#include <vector>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -15,41 +16,44 @@ namespace rocksdb {
       std::map<int, CTSL::HashMap<std::string, int>*> tableOfIndexes;
       std::map<int, std::atomic<int>> liveIndexesAccesses;
       int indexToBeDeleted;
+      std::vector<int> epochs;
 
       std::atomic<int> clearIndex;
-        int return_counter_last_stable_value() {
-            std::ifstream ifs;
-            std::string line, prev;
-            int id;
+      int return_counter_last_stable_value() {
+        std::ifstream ifs;
+        std::string line, prev;
+        int id;
 
-            ifs.open ("counter_file.txt", std::ifstream::in);
-            while (std::getline(ifs, line)) {
-                prev = line;
-            }
-
-            if (prev.size() != 0) {
-                id =  std::stoi(prev);
-            }
-            else {
-                id = -1;
-            }
-            ifs.close();
-
-            return id;
+        ifs.open ("counter_file.txt", std::ifstream::in);
+        while (std::getline(ifs, line)) {
+          prev = line;
         }
+
+        if (prev.size() != 0) {
+          id =  std::stoi(prev);
+        }
+        else {
+          id = -1;
+        }
+        ifs.close();
+
+        return id;
+      }
 
       TemporaryCache() {
         clearIndex = 0;
         int id;
         if ((id = return_counter_last_stable_value()) == -1) {
-        tableOfIndexes[1] = new CTSL::HashMap<std::string, int>;
-        liveIndexesAccesses[1].store(0, std::memory_order_seq_cst);
-        indexToBeDeleted = 1;
+          tableOfIndexes[1] = new CTSL::HashMap<std::string, int>;
+          liveIndexesAccesses[1].store(0, std::memory_order_seq_cst);
+          indexToBeDeleted = 1;
+          epochs.push_back(1);
         }
         else {
-        tableOfIndexes[id+1] = new CTSL::HashMap<std::string, int>;
-        liveIndexesAccesses[id+1].store(0, std::memory_order_seq_cst);
-        indexToBeDeleted = id+1;
+          tableOfIndexes[id+1] = new CTSL::HashMap<std::string, int>;
+          liveIndexesAccesses[id+1].store(0, std::memory_order_seq_cst);
+          indexToBeDeleted = id+1;
+          epochs.push_back(id+1);
         }
       };
 
@@ -85,24 +89,40 @@ namespace rocksdb {
          * accessed lately (last epoch). We choose a distance to
          * accomodate long transactions.
          */
-        if (indexToBeDeleted + DISTANCE < incremented_val) {
-          if (liveIndexesAccesses[indexToBeDeleted] == 0){
-            // std::cout << "[Delete Index matched to timestamp: " << indexToBeDeleted<< "]\n";
-            delete tableOfIndexes.find(indexToBeDeleted)->second;
-            tableOfIndexes.erase(indexToBeDeleted);
-            indexToBeDeleted++;
-            // std::cout << "[Delete Index matched to timestamp: " << indexToBeDeleted<< " Successful]\n";
+        /*
+           if (indexToBeDeleted + DISTANCE < incremented_val) {
+           if (liveIndexesAccesses[indexToBeDeleted] == 0){
+        // std::cout << "[Delete Index matched to timestamp: " << indexToBeDeleted<< "]\n";
+        delete tableOfIndexes.find(indexToBeDeleted)->second;
+        tableOfIndexes.erase(indexToBeDeleted);
+        indexToBeDeleted++;
+        // std::cout << "[Delete Index matched to timestamp: " << indexToBeDeleted<< " Successful]\n";
+        }
+        }*/
+
+        if (epochs.size() >= DISTANCE) {
+          if (liveIndexesAccesses[epochs.front()] == 0){
+            // std::cout << "[Delete Index matched to timestamp: " << epochs.front() << "]\n";
+            delete tableOfIndexes.find(epochs.front())->second;
+            tableOfIndexes.erase(epochs.front());
+            epochs.erase(epochs.begin());
+            // std::cout << "[Delete Index matched to timestamp: Successful]\n";
           }
         }
 
-        for (int i = indexToBeDeleted; i < incremented_val; i++) {
-          liveIndexesAccesses[i].store(0, std::memory_order_seq_cst);
+        for (unsigned i = 0; i < epochs.size(); i++) {
+          liveIndexesAccesses[epochs[i]].store(0, std::memory_order_seq_cst);
         }
+        /*
+           for (int i = indexToBeDeleted; i < incremented_val; i++) {
+           liveIndexesAccesses[i].store(0, std::memory_order_seq_cst);
+           }
+           */
         tableOfIndexes[incremented_val+1] = new CTSL::HashMap<std::string, int>;
         liveIndexesAccesses[incremented_val + 1].store(0, std::memory_order_seq_cst);
         // std::cout << "[Index for timestamp: " << incremented_val + 1 << " created]\n";
         stableVal->store(incremented_val, std::memory_order_seq_cst);
-
+        epochs.push_back(incremented_val+1);
         // logging the counter value to the file would no longer needed when integrating to SPEICHER
         std::ofstream log_file("counter_file.txt", std::ios_base::out | std::ios_base::app);
         log_file << stableVal->load() << "\n";
